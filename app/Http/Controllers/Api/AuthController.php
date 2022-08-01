@@ -5,11 +5,12 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
+use Symfony\Component\HttpFoundation\Response;
 
 class AuthController extends Controller
 {
-    public function register(Request $request){
+    public function register(Request $request)
+    {
 
         $data = $request->validate([
             'name' => 'required|string',
@@ -25,43 +26,32 @@ class AuthController extends Controller
 
         $token = $user->createToken('apiToken')->plainTextToken;
 
-        $res = [
+        return response()->json([
             'user' => $user,
             'token' => $token
-        ];
-        return response($res, 201);
+        ], Response::HTTP_CREATED);
     }
+
     public function login(Request $request)
     {
         $data = $request->validate([
-            'email' => 'required|string',
+            'email' => 'required|exists:users,email',
             'password' => 'required|string'
         ]);
 
-        $user = User::where('email', $data['email'])->first();
-
-        if (!$user || !Hash::check($data['password'], $user->password)) {
-            return response([
-                'msg' => 'Unauthorized!'
-            ], 401);
+        if (auth()->attempt($data)) {
+            $token = auth()->user()->createToken('apiToken')->plainTextToken;
+            return response()->json([
+                'success' => true,
+                'token' => $token
+            ], Response::HTTP_CREATED);
         }
 
-        $token = $user->createToken('apiToken')->plainTextToken;
+        return response()->json([
+            'success' => false,
+            'msg' => 'Unauthorized!'
+        ], Response::HTTP_UNAUTHORIZED);
 
-        $res = [
-            'user' => $user,
-            'token' => $token
-        ];
-
-        return response($res, 201);
-    }
-
-    public function logout(Request $request)
-    {
-        auth()->user()->tokens()->delete();
-        return [
-            'msg' => 'Logged Out!'
-        ];
     }
 
     public function user(Request $request)
@@ -69,5 +59,12 @@ class AuthController extends Controller
         return response()->json($request->user());
     }
 
+    public function logout(Request $request)
+    {
+        auth()->user()->tokens()->delete();
 
+        return [
+            'msg' => 'Logged Out!'
+        ];
+    }
 }

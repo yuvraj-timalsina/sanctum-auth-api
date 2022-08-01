@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 
 class AuthController extends Controller
 {
@@ -39,7 +40,7 @@ class AuthController extends Controller
 
         $user = User::where('email', $data['email'])->first();
 
-        if (!$user || !bcrypt($data['password'], $user->password)) {
+        if (!$user || !Hash::check($data['password'], $user->password)) {
             return response([
                 'msg' => 'Unauthorized!'
             ], 401);
@@ -59,7 +60,7 @@ class AuthController extends Controller
     {
         auth()->user()->tokens()->delete();
         return [
-            'message' => 'Logged Out!'
+            'msg' => 'Logged Out!'
         ];
     }
 
